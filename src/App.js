@@ -58,33 +58,53 @@ class App extends Component {
     onSubmit = async (event) => {
       event.preventDefault();
 
-      //bring in user's metamask account address
-      const accounts = await web3.eth.getAccounts();
-     
-      console.log('Sending from Metamask account: ' + accounts[0]);
+      if (window.ethereum) {
+         window.web3 = new Web3(ethereum);
+         try {
+             // Request account access if needed
+             await ethereum.enable();
+             // Acccounts now exposed
+             //bring in user's metamask account address
+             const accounts = await web3.eth.getAccounts();
 
-      //obtain contract address from storehash.js
-      const ethAddress= await storehash.options.address;
-      this.setState({ethAddress});
+             console.log('Sending from Metamask account: ' + accounts[0]);
 
-      //save document to IPFS,return its hash#, and set hash# to state
-      //https://github.com/ipfs/interface-ipfs-core/blob/master/SPEC/FILES.md#add 
-      await ipfs.add(this.state.buffer, (err, ipfsHash) => {
-        console.log(err,ipfsHash);
-        //setState by setting ipfsHash to ipfsHash[0].hash 
-        this.setState({ ipfsHash:ipfsHash[0].hash });
+             //obtain contract address from storehash.js
+             const ethAddress= await storehash.options.address;
+             this.setState({ethAddress});
 
-        // call Ethereum contract method "sendHash" and .send IPFS hash to etheruem contract 
-        //return the transaction hash from the ethereum contract
-        //see, this https://web3js.readthedocs.io/en/1.0/web3-eth-contract.html#methods-mymethod-send
-        
-        storehash.methods.sendHash(this.state.ipfsHash).send({
-          from: accounts[0] 
-        }, (error, transactionHash) => {
-          console.log(transactionHash);
-          this.setState({transactionHash});
-        }); //storehash 
-      }) //await ipfs.add 
+             //save document to IPFS,return its hash#, and set hash# to state
+             //https://github.com/ipfs/interface-ipfs-core/blob/master/SPEC/FILES.md#add 
+             await ipfs.add(this.state.buffer, (err, ipfsHash) => {
+               console.log(err,ipfsHash);
+               //setState by setting ipfsHash to ipfsHash[0].hash 
+               this.setState({ ipfsHash:ipfsHash[0].hash });
+
+               // call Ethereum contract method "sendHash" and .send IPFS hash to etheruem contract 
+               //return the transaction hash from the ethereum contract
+               //see, this https://web3js.readthedocs.io/en/1.0/web3-eth-contract.html#methods-mymethod-send
+
+               storehash.methods.sendHash(this.state.ipfsHash).send({
+                 from: accounts[0] 
+               }, (error, transactionHash) => {
+                 console.log(transactionHash);
+                 this.setState({transactionHash});
+               }); //storehash 
+         } catch (error) {
+             // User denied account access...
+              console.log('not approved by user');
+         }
+      }
+      // Legacy dapp browsers...
+      else if (window.web3) {
+          window.web3 = new Web3(web3.currentProvider);
+          console.log('You should consider trying new MetaMask!');
+      }
+      // Non-dapp browsers...
+      else {
+              console.log('Non-Ethereum browser detected. You should consider trying MetaMask!');
+          }
+      }     
     }; //onSubmit 
   
     render() {
